@@ -1,0 +1,68 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const {
+  parseAllowedGroupJids,
+  parsePrivateReviewJids,
+  isAllowedGroupJid,
+  shouldIgnoreJid,
+} = require('../../../src/whatsapp/group-access');
+
+test('parses and trims the single configured payment group JID', () => {
+  assert.deepEqual(
+    parseAllowedGroupJids(
+      ' 1234567890-1234567890@g.us ',
+      '1234567890-1234567890@g.us'
+    ),
+    ['1234567890-1234567890@g.us']
+  );
+});
+
+test('rejects configuration for more than one payment group', () => {
+  assert.throws(
+    () => parseAllowedGroupJids('1234567890-1234567890@g.us,1234567890-9876543210@g.us'),
+    /Exactly one WhatsApp group JID may be configured/
+  );
+});
+
+test('rejects malformed group JIDs', () => {
+  assert.throws(
+    () => parseAllowedGroupJids('not-a-group'),
+    /Invalid WhatsApp group JID/
+  );
+});
+
+test('allows only exact configured group JIDs', () => {
+  const allowedGroups = ['1234567890-1234567890@g.us'];
+
+  assert.equal(isAllowedGroupJid('1234567890-1234567890@g.us', allowedGroups), true);
+  assert.equal(isAllowedGroupJid('1234567890-9876543210@g.us', allowedGroups), false);
+  assert.equal(isAllowedGroupJid('923220692321@s.whatsapp.net', allowedGroups), false);
+});
+
+test('fails closed when no groups are configured', () => {
+  assert.deepEqual(parseAllowedGroupJids('', undefined), []);
+  assert.equal(isAllowedGroupJid('1234567890-1234567890@g.us', []), false);
+});
+
+test('accepts only direct WhatsApp JIDs for private payment review proof', () => {
+  assert.deepEqual(
+    parsePrivateReviewJids(' 923001234567@s.whatsapp.net,267228989665304@lid,923001234567@s.whatsapp.net '),
+    ['923001234567@s.whatsapp.net', '267228989665304@lid']
+  );
+  assert.deepEqual(parsePrivateReviewJids(''), []);
+});
+
+test('rejects groups as private payment review recipients', () => {
+  assert.throws(
+    () => parsePrivateReviewJids('1234567890-1234567890@g.us'),
+    /Invalid private review JID/
+  );
+});
+
+test('does not filter direct protocol JIDs needed for group encryption', () => {
+  const allowedGroups = ['1234567890-1234567890@g.us'];
+
+  assert.equal(shouldIgnoreJid('1234567890-9876543210@g.us', allowedGroups), true);
+  assert.equal(shouldIgnoreJid('923220692321@s.whatsapp.net', allowedGroups), false);
+  assert.equal(shouldIgnoreJid('267228989665304@lid', allowedGroups), false);
+});
