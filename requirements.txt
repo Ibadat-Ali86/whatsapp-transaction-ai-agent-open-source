@@ -17,7 +17,7 @@ pytesseract==0.3.13
 Pillow==10.4.0
 
 # --- AI providers ---
-groq==0.9.0          # Groq Vision — development/testing fallback
+groq==1.7.0          # Groq Vision — development/testing fallback
 httpx==0.27.0        # Used by groq client internally + for future HTTP calls
 
 # --- Environment ---
